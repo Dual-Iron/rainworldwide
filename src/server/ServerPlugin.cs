@@ -23,29 +23,20 @@ sealed class ServerPlugin : BaseUnityPlugin
         }
 
         LogDebug("Hello Server!");
-        NewMethod();
+
+        LogDebug("Env vars: " + Environment.GetCommandLineArgs().ToDebugString());
+
+        On.RainWorld.Start += RainWorld_Start;
+        On.RainWorld.Update += RainWorld_Update;
+        On.RainWorldSteamManager.ctor_ProcessManager += IgnoreSteam;
+
+        // Ignore all controller and keyboard input for server
+        new Hook(typeof(Rewired.Player).GetMethod("GetButton", [typeof(int)]), GetInput);
+
+        // No need to hook Application.PersistentDataPath, that is included in the modified Assembly-CSharp.dll file.
     }
 
-    private void NewMethod()
-    {
-        try {
-            LogDebug("Env vars: " + Environment.GetCommandLineArgs().ToDebugString());
-
-            //On.RainWorld.Start += RainWorld_Start;
-            //On.RainWorld.Update += RainWorld_Update;
-            //On.RainWorldSteamManager.ctor += IgnoreSteam;
-
-            // Ignore all controller and keyboard input for server
-            new Hook(typeof(Rewired.Player).GetMethod("GetButton", [typeof(int)]), GetInput);
-
-            // No need to hook PersistentDataPath, that is included in the modified Assembly-CSharp.dll file.
-        }
-        catch (Exception e) {
-            LogError(e);
-        }
-    }
-
-    private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
+    private static void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
     {
         try {
             orig(self);
@@ -57,7 +48,7 @@ sealed class ServerPlugin : BaseUnityPlugin
         }
     }
 
-    private void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
+    private static void RainWorld_Update(On.RainWorld.orig_Update orig, RainWorld self)
     {
         // Don't play sounds from the console.
         AudioListener.pause = true;
@@ -70,21 +61,14 @@ sealed class ServerPlugin : BaseUnityPlugin
         }
     }
 
-    private void IgnoreSteam(On.RainWorldSteamManager.orig_ctor orig, RainWorldSteamManager self, ProcessManager manager)
+    private static void IgnoreSteam(On.RainWorldSteamManager.orig_ctor_ProcessManager orig, RainWorldSteamManager self, ProcessManager manager)
     {
         self.ID = ProcessManager.ProcessID.RainWorldSteamManager;
         self.manager = manager;
         self.shutdown = true;
     }
 
-    private static string SavePath()
-    {
-        // Save just outside game folder in "save"
-        // Servers are run inside a "server/game" folder, so "server/save" is the save path.
-        return Path.Combine(Application.streamingAssetsPath, "../../../save");
-    }
-
-    private bool GetInput(Func<Rewired.Player, int, bool> orig, Rewired.Player self, int actionId)
+    private static bool GetInput(Func<Rewired.Player, int, bool> orig, Rewired.Player self, int actionId)
     {
         return false;
     }
