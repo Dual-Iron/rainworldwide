@@ -1,5 +1,4 @@
-Use this template on GitHub or just [download the code](https://github.com/Dual-Iron/TestMod/archive/refs/heads/master.zip), whichever is easiest.
-
-Rename `src/TestMod.csproj`, then edit `assets/modinfo.json` and `src/Plugin.cs` to customize your mod.
-
-See [the modding wiki](https://rainworldmodding.miraheze.org/wiki/Downpour_Reference/Mod_Directories) for `modinfo.json` documentation.
+## Diff for SERVER-Assembly-CSharp.dll
+- Modified `Options.OptionsFile_OnReadCompleted` to force-enable `rwremix` and `rain-worldwide-server`
+- Modified `RainWorld.Awake()` to adjust save file path
+- Added the `RainWorld.SavePath()` method

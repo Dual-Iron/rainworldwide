@@ -1,0 +1,15 @@
+﻿{
+  "id": "rain-worldwide-server",
+  "name": "Rain Worldwide Server",
+  "version": "0.1.0",
+  "authors": "Dual",
+  "target_game_version": "v1.9.15b",
+  "description": "Rain Worldwide online multiplayer",
+  "requirements": [
+    "rwremix"
+  ],
+  "requirements_names": [
+    "Remix"
+  ],
+  "checksum_override_version": false
+}
