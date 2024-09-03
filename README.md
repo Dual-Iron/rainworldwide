@@ -12,3 +12,7 @@
 5. Copy `rainworldwide/assets/startserver.bat` into `server/`
 
 As a note, it's okay to have the `server/` directory inside the `Rain World/` directory.
+
+## Things to trim from server files
+- All pngs
+- All sound effect files and unneeded Unity assets
