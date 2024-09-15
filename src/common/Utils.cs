@@ -3,23 +3,42 @@ global using System.Linq;
 global using System.Collections.Generic;
 global using UnityEngine;
 global using static Rww.Utils;
+using System.Runtime.CompilerServices;
 using System.Collections;
 using System.Text;
 using RWCustom;
+using System.IO;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
+using System.Net;
 
 namespace Rww;
 
 static class Utils
 {
+    #region LOGGING
     private static readonly BepInEx.Logging.ManualLogSource logger = BepInEx.Logging.Logger.CreateLogSource("RWW");
 
-    private static string PrependTime(object message) => DateTime.UtcNow.ToString("HH:mm:ss.fff") + " | " + (message ?? null);
-
-    public static void LogDebug(object message) => logger.LogDebug(PrependTime(message));
-    public static void LogInfo(object message) => logger.LogInfo(PrependTime(message));
-    public static void LogWarning(object message) => logger.LogWarning(PrependTime(message));
-    public static void LogError(object message) => logger.LogError(PrependTime(message));
-    public static void LogFatal(object message) => logger.LogFatal(PrependTime(message));
+    public static void Log([CallerLineNumber] int line = 0, [CallerFilePath] string file = "", [CallerMemberName] string mem = "")
+    {
+        logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {Path.GetFileName(file)}:{line} in {mem}()");
+    }
+    public static void LogMessage(string msg = "")
+    {
+        logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {msg}");
+    }
+    public static void LogError(object msg)
+    {
+        logger.LogError($"{DateTime.UtcNow:HH:mm:ss.fff} | {(msg is string ? msg : ToDebugString(msg))}");
+    }
+    public static T LogValue<T>(T value, [CallerArgumentExpression(nameof(value))] string expression = "")
+    {
+        if (expression.Length > 15) {
+            expression = expression.Substring(0, 12).Trim(',', ' ', '.') + "...";
+        }
+        logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {expression} = {ToDebugString(value)}");
+        return value;
+    }
 
     private static readonly RainWorld rw = UnityEngine.Object.FindObjectOfType<RainWorld>();
     public static RainWorldGame Game() => rw.processManager.currentMainLoop as RainWorldGame;
@@ -29,6 +48,7 @@ static class Utils
         return obj switch
         {
             null => "null",
+            char c => $"'{c}'",
             string s => '"' + s + '"',
             sbyte or byte or short or ushort or int or uint or long or ulong => obj.ToString(),
             float or double or decimal => string.Format("F2", obj),
@@ -96,4 +116,20 @@ static class Utils
         sb.Append("]");
         return sb.ToString();
     }
+    #endregion
+
+    public static string GetLocalIPAddress()
+    {
+        if (NetworkInterface.GetIsNetworkAvailable()) {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList) {
+                if (ip.AddressFamily == AddressFamily.InterNetwork) {
+                    return ip.ToString();
+                }
+            }
+        }
+        LogError("No internet connection");
+        return null;
+    }
+
 }

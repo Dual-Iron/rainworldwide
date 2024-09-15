@@ -17,14 +17,15 @@ sealed class ServerPlugin : BaseUnityPlugin
     {
         // Prevent accidentally enabling MSC
         if (ModManager.MSC) {
-            LogFatal("DISABLE MORE SLUGCATS EXPANSION. Server closing.");
+            LogError("DISABLE MORE SLUGCATS EXPANSION. Server closing.");
             Application.Quit();
             return;
         }
 
-        LogDebug("Hello Server!");
+        ProcessArgs(out int port);
 
-        LogDebug("Env vars: " + Environment.GetCommandLineArgs().ToDebugString());
+        string ip = GetLocalIPAddress();
+        LogValue(ip);
 
         On.RainWorld.Start += RainWorld_Start;
         On.RainWorld.Update += RainWorld_Update;
@@ -36,13 +37,31 @@ sealed class ServerPlugin : BaseUnityPlugin
         // No need to hook Application.PersistentDataPath, that is included in the modified Assembly-CSharp.dll file.
     }
 
+    private static void ProcessArgs(out int port)
+    {
+        port = 10933;
+
+        string[] args = Environment.GetCommandLineArgs();
+        LogValue(args);
+
+        var portStr = args.FirstOrDefault(a => a.StartsWith("-port="));
+        if (portStr != null && ushort.TryParse(portStr.Substring(6), out ushort _port) && port != _port) {
+            port = _port;
+            LogMessage("Port set to " + port);
+        }
+
+        if (!args.Contains("-batchmode")) {
+            LogError("Server not in batchmode");
+        }
+    }
+
     private static void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
     {
         try {
             orig(self);
         }
         catch (Exception e) {
-            LogFatal(e);
+            LogError(e);
 
             Application.Quit();
         }
