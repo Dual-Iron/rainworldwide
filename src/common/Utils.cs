@@ -11,6 +11,7 @@ using System.IO;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Net;
+using LiteNetLib;
 
 namespace Rww;
 
@@ -51,9 +52,6 @@ static class Utils
         throw new AssumptionInvalidException("Assumption failed for equality between:" +
             $"\n{oneExpr} = {ToDebugString(one)}\n{twoExpr} = {ToDebugString(two)}");
     }
-
-    private static readonly RainWorld rw = UnityEngine.Object.FindObjectOfType<RainWorld>();
-    public static RainWorldGame Game() => rw.processManager.currentMainLoop as RainWorldGame;
 
     public static string ToDebugString(this object obj)
     {
@@ -129,6 +127,18 @@ static class Utils
         return sb.ToString();
     }
     #endregion
+
+    private static RainWorld rw;
+    private static RainWorld Rw => rw ??= UnityEngine.Object.FindObjectOfType<RainWorld>();
+    public static RainWorldGame Game() => Rw?.processManager?.currentMainLoop as RainWorldGame;
+
+    public static int ID(this PhysicalObject o) => o.abstractPhysicalObject.ID.number;
+    public static int ID(this AbstractPhysicalObject o) => o.ID.number;
+
+    public static bool DirExistsAt(params string[] path)
+    {
+        return Directory.Exists(BepInEx.Utility.CombinePaths(path));
+    }
 
     public static string GetLocalIPAddress()
     {

@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Security.Permissions;
 using System.Net.NetworkInformation;
+using Client.Hooks;
 
 // Allows access to private members
 #pragma warning disable CS0618
@@ -19,6 +20,6 @@ sealed class ClientPlugin : BaseUnityPlugin
         string ip = GetLocalIPAddress();
         LogValue(ip);
 
-        new MenuChanges().Hook();
+        new MenuHooks().Hook();
     }
 }

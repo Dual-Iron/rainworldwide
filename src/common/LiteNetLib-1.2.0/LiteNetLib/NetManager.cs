@@ -128,7 +128,7 @@ namespace LiteNetLib
             public DateTime TimeWhenGet;
         }
         private readonly List<IncomingData> _pingSimulationList = new List<IncomingData>();
-        private readonly Random _randomGenerator = new Random();
+        private readonly System.Random _randomGenerator = new System.Random();
         private const int MinLatencyThreshold = 5;
 #endif
 

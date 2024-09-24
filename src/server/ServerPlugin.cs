@@ -1,5 +1,4 @@
 ﻿using MonoMod.RuntimeDetour;
-using System.IO;
 using BepInEx;
 using System.Security.Permissions;
 
@@ -22,11 +21,6 @@ sealed class ServerPlugin : BaseUnityPlugin
             return;
         }
 
-        ProcessArgs(out int port);
-
-        string ip = GetLocalIPAddress();
-        LogValue(ip);
-
         On.RainWorld.Start += RainWorld_Start;
         On.RainWorld.Update += RainWorld_Update;
         On.RainWorldSteamManager.ctor_ProcessManager += IgnoreSteam;
@@ -35,24 +29,15 @@ sealed class ServerPlugin : BaseUnityPlugin
         new Hook(typeof(Rewired.Player).GetMethod("GetButton", [typeof(int)]), GetInput);
 
         // No need to hook Application.PersistentDataPath, that is included in the modified Assembly-CSharp.dll file.
+
+        // Init server netcode!
+        _ = ServerNet.State;
     }
 
-    private static void ProcessArgs(out int port)
+    public void OnApplicationQuit()
     {
-        port = 10933;
-
-        string[] args = Environment.GetCommandLineArgs();
-        LogValue(args);
-
-        var portStr = args.FirstOrDefault(a => a.StartsWith("-port="));
-        if (portStr != null && ushort.TryParse(portStr.Substring(6), out ushort _port) && port != _port) {
-            port = _port;
-            Log("Port set to " + port);
-        }
-
-        if (!args.Contains("-batchmode")) {
-            LogError("Server not in batchmode");
-        }
+        Log("Graceful exit");
+        ServerNet.State.Stop();
     }
 
     private static void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
@@ -61,7 +46,7 @@ sealed class ServerPlugin : BaseUnityPlugin
             orig(self);
         }
         catch (Exception e) {
-            LogError(e);
+            LogError($"Error cascaded to RainWorld.Start(). {e}");
 
             Application.Quit();
         }
@@ -76,7 +61,7 @@ sealed class ServerPlugin : BaseUnityPlugin
             orig(self);
         }
         catch (Exception e) {
-            LogError($"Exception in update logic. {e}");
+            LogError($"Error in RainWorld.Update(). {e}");
         }
     }
 

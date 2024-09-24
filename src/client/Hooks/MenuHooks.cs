@@ -1,14 +1,12 @@
 ﻿using Menu;
 
-namespace Client;
+namespace Client.Hooks;
 
-sealed internal class MenuChanges
+sealed class MenuHooks
 {
-    static readonly string signal = "RAIN_WORLDWIDE_ONLINE";
-    
     public void Hook()
     {
-        On.Menu.MainMenu.AddMainMenuButton += MainMenu_AddMainMenuButton; ;
+        On.Menu.MainMenu.AddMainMenuButton += MainMenu_AddMainMenuButton;
         On.Menu.MainMenu.Update += MainMenu_Update;
     }
 
@@ -19,23 +17,40 @@ sealed internal class MenuChanges
         // Add MULTI PLAYER button at location of REGIONS button
         if (button.signalText == "REGIONS") {
             self.AddMainMenuButton(
-                new SimpleButton(self, self.pages[0], "WORLDWIDE", signal, button.pos, button.size),
-                () => WorldwidePressed(self),
-                0
+                new SimpleButton(self, self.pages[0], "WORLDWIDE", "RWW", button.pos, button.size), WorldwidePressed, 0
             );
         }
     }
 
-    void WorldwidePressed(MainMenu menu) 
+    void WorldwidePressed()
     {
-        ClientNetState.Initialize();
+        connectingGreyed = true;
+        ClientNet.State.Connect("localhost", Packets.DefaultPort);
     }
 
     bool warningAdded;
+    bool connectingGreyed;
 
     void MainMenu_Update(On.Menu.MainMenu.orig_Update orig, MainMenu self)
     {
         orig(self);
+
+        // Grey everything out while connecting to self
+        if (connectingGreyed) {
+            foreach (SimpleButton simpleButton in self.mainMenuButtons) {
+                simpleButton.buttonBehav.greyedOut = true;
+            }
+        }
+
+        if (ClientNet.State.Progress == ConnectionProgress.Connecting) {
+            connectingGreyed = true;
+        } else if (ClientNet.State.Progress == ConnectionProgress.Disconnected) {
+            connectingGreyed = false;
+        } else if (ClientNet.State.Progress == ConnectionProgress.Connected && IntroduceClient.Queue.Latest(out var p)) {
+            Log($"Joining game: {p}");
+            ClientNet.State.IntroducedToSession(p);
+            self.manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
+        }
 
         // Prevent accidentally enabling MSC
         if (ModManager.MSC) {
