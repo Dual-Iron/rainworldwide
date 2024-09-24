@@ -47,7 +47,7 @@ sealed class ServerPlugin : BaseUnityPlugin
         var portStr = args.FirstOrDefault(a => a.StartsWith("-port="));
         if (portStr != null && ushort.TryParse(portStr.Substring(6), out ushort _port) && port != _port) {
             port = _port;
-            LogMessage("Port set to " + port);
+            Log("Port set to " + port);
         }
 
         if (!args.Contains("-batchmode")) {

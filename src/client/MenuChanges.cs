@@ -28,7 +28,7 @@ sealed internal class MenuChanges
 
     void WorldwidePressed(MainMenu menu) 
     {
-        Log();
+        ClientNetState.Initialize();
     }
 
     bool warningAdded;

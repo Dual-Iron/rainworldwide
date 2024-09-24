@@ -23,7 +23,7 @@ static class Utils
     {
         logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {Path.GetFileName(file)}:{line} in {mem}()");
     }
-    public static void LogMessage(string msg = "")
+    public static void Log(string msg)
     {
         logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {msg}");
     }
@@ -38,6 +38,18 @@ static class Utils
         }
         logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {expression} = {ToDebugString(value)}");
         return value;
+    }
+
+    private sealed class AssumptionInvalidException(string message) : Exception(message) { }
+    public static T AssumeEqual<T>(T one, T two,
+        [CallerArgumentExpression(nameof(one))] string oneExpr = "",
+        [CallerArgumentExpression(nameof(two))] string twoExpr = "")
+    {
+        if (ReferenceEquals(one, two) || one != null && two != null && one.Equals(two)) {
+            return one;
+        }
+        throw new AssumptionInvalidException("Assumption failed for equality between:" +
+            $"\n{oneExpr} = {ToDebugString(one)}\n{twoExpr} = {ToDebugString(two)}");
     }
 
     private static readonly RainWorld rw = UnityEngine.Object.FindObjectOfType<RainWorld>();
