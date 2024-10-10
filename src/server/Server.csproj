@@ -1,25 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-    <LangVersion>12</LangVersion>
-    <DefineConstants>$(DefineConstants)</DefineConstants>
-	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>12</LangVersion>
+		<DefineConstants>$(DefineConstants)</DefineConstants>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Reference Include="../../lib/*.dll">
-      <Private>false</Private>
-    </Reference>
-    <Compile Include="../common/**/*.cs" />
-  </ItemGroup>
+	<ItemGroup>
+		<Reference Include="../../lib/*.dll">
+			<Private>false</Private>
+		</Reference>
+		<Compile Include="../common/**/*.cs" />
+	</ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('$(RainWorldDir)')">
-    <Copy SourceFiles="$(ProjectDir)../../assets/server/modinfo.json" DestinationFiles="$(RainWorldDir)/server/game/RainWorld_Data/StreamingAssets/mods/$(ProjectName)/modinfo.json" />
-    <Copy SourceFiles="$(ProjectDir)../../assets/server/startserver.bat" DestinationFolder="$(RainWorldDir)/server" />
-    <Copy SourceFiles="$(ProjectDir)../../assets/server/game/RainWorld_Data/Managed/SERVER-Assembly-CSharp.dll" DestinationFiles="$(RainWorldDir)/server/game/RainWorld_Data/Managed/Assembly-CSharp.dll" />
-    <Copy SourceFiles="$(ProjectDir)../../assets/server/game/RainWorld_Data/StreamingAssets/enabledMods.txt" DestinationFiles="$(RainWorldDir)/server/game/RainWorld_Data/StreamingAssets/enabledMods.txt" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(RainWorldDir)/server/game/RainWorld_Data/StreamingAssets/mods/$(ProjectName)/plugins" />
-  </Target>
+	<Target Name="PacketSourceGen" AfterTargets="PreBuildEvent">
+		<Exec Command="$(ProjectDir)../sourcegen/bin/Debug/net8.0/SourceGen.exe" />
+	</Target>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('$(RainWorldDir)')">
+		<Copy SourceFiles="$(ProjectDir)../../assets/server/modinfo.json" DestinationFiles="$(RainWorldDir)/server/game/RainWorld_Data/StreamingAssets/mods/$(ProjectName)/modinfo.json" />
+		<Copy SourceFiles="$(ProjectDir)../../assets/server/startserver.bat" DestinationFolder="$(RainWorldDir)/server" />
+		<Copy SourceFiles="$(ProjectDir)../../assets/server/game/RainWorld_Data/Managed/SERVER-Assembly-CSharp.dll" DestinationFiles="$(RainWorldDir)/server/game/RainWorld_Data/Managed/Assembly-CSharp.dll" />
+		<Copy SourceFiles="$(ProjectDir)../../assets/server/game/RainWorld_Data/StreamingAssets/enabledMods.txt" DestinationFiles="$(RainWorldDir)/server/game/RainWorld_Data/StreamingAssets/enabledMods.txt" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(RainWorldDir)/server/game/RainWorld_Data/StreamingAssets/mods/$(ProjectName)/plugins" />
+	</Target>
 
 </Project>
