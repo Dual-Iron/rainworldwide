@@ -2,7 +2,7 @@ global using System;
 global using System.Linq;
 global using System.Collections.Generic;
 global using UnityEngine;
-global using static Rww.Utils;
+global using static Common.Utils;
 using System.Runtime.CompilerServices;
 using System.Collections;
 using System.Text;
@@ -13,7 +13,7 @@ using System.Net.Sockets;
 using System.Net;
 using LiteNetLib;
 
-namespace Rww;
+namespace Common;
 
 static class Utils
 {

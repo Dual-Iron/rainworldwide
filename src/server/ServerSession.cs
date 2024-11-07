@@ -1,4 +1,5 @@
-﻿using LiteNetLib;
+﻿using Common;
+using LiteNetLib;
 
 namespace Server;
 
@@ -20,7 +21,7 @@ sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConf
             player.RealizeInRoom();
         }
 
-        IntroduceClient packet = new(player.ID(), saveStateNumber.ToString(), player.Room.name);
+        RealizePlayer packet = new(player.ID(), saveStateNumber.ToString(), player.Room.name);
 
         peer.Send(packet, DeliveryMethod.ReliableOrdered);
         peer.Send(new SyncTick(), DeliveryMethod.ReliableOrdered);

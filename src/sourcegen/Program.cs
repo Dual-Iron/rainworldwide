@@ -1,14 +1,21 @@
-﻿string packets = """
-    0x10 AddClient
+﻿// Rye © 2024
+// Defines all the packets used by RainWorldwide
+//   0x1X - Session Management
+//   0x2X - Syncing
+//   0x3X - Syncing
+string packets = """
+    0x10 RealizePlayer
         i32 PlayerID
         str SlugcatWorld
         str StartingRoom
-    0x11 SyncTick
+    0x20 SyncTick
     """;
 
+#region GENERATION CODE
 string generated = """
     using LiteNetLib;
     using LiteNetLib.Utils;
+    using RWCustom;
     
     namespace Common;
     
@@ -25,7 +32,9 @@ static string ToCSharp(string ty) => ty switch
 {
     "i32" => "int",
     "str" => "string",
-    _ => "ERROR",
+    "fvec" => "Vector2",
+    "ivec" => "IntVector2",
+    _ => ty,
 };
 
 List<(string n, string c)> packetNames = [];
@@ -85,6 +94,9 @@ generated += $$"""
             }
             AssumeEqual(reader.AvailableBytes, 0, twoExpr: "expected");
         }
+
+        public static Vector2 GetVector2(this NetDataReader reader) => new(x: reader.GetFloat(), y: reader.GetFloat());
+        public static IntVector2 GetIntVector2(this NetDataReader reader) => new(p1: reader.GetInt(), p2: reader.GetInt());
     }
 
     """;
@@ -98,3 +110,4 @@ path = path[..path.LastIndexOf("\\src\\")];
 path += "/src/common/Packets.generated.cs";
 
 File.WriteAllText(path, generated);
+#endregion

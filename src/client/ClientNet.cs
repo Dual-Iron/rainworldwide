@@ -1,4 +1,5 @@
-﻿using LiteNetLib;
+﻿using Common;
+using LiteNetLib;
 
 namespace Client;
 
@@ -24,7 +25,7 @@ sealed class ClientNet
     private readonly NetManager client;
 
     public ConnectionProgress Progress { get; private set; }
-    public IntroduceClient? IntroPacket { get; private set; }
+    public RealizePlayer? IntroPacket { get; private set; }
 
     public void Disconnect()
     {
@@ -46,7 +47,7 @@ sealed class ClientNet
         Log($"Connecting to server at {address}:{port}");
     }
 
-    public void IntroducedToSession(IntroduceClient packet)
+    public void IntroducedToSession(RealizePlayer packet)
     {
         IntroPacket = packet;
     }

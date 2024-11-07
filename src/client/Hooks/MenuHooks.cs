@@ -1,4 +1,5 @@
-﻿using Menu;
+﻿using Common;
+using Menu;
 
 namespace Client.Hooks;
 
@@ -46,7 +47,7 @@ sealed class MenuHooks
             connectingGreyed = true;
         } else if (ClientNet.State.Progress == ConnectionProgress.Disconnected) {
             connectingGreyed = false;
-        } else if (ClientNet.State.Progress == ConnectionProgress.Connected && IntroduceClient.Queue.Latest(out var p)) {
+        } else if (ClientNet.State.Progress == ConnectionProgress.Connected && RealizePlayer.Queue.Latest(out var p)) {
             Log($"Joining game: {p}");
             ClientNet.State.IntroducedToSession(p);
             self.manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);

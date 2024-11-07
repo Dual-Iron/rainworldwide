@@ -1,6 +1,8 @@
-﻿namespace Client;
+﻿using Common;
 
-sealed class ClientSession(IntroduceClient c, RainWorldGame game) : StoryGameSession(new(c.SlugcatWorld), game)
+namespace Client;
+
+sealed class ClientSession(RealizePlayer c, RainWorldGame game) : StoryGameSession(new(c.SlugcatWorld), game)
 {
     public int PID { get; } = c.PlayerID;
     public string StartingRoom { get; } = c.StartingRoom;
