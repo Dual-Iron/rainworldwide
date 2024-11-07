@@ -1,21 +1,27 @@
-## How to set up a server
-1. Locate the `Rain World/` directory containing `RainWorld.exe`. To do this, right click on Rain World in the Steam library, click "Manage", and click "Browse local files"
-2. Set the `RainWorldDir` env var to point to this directory
-3. Locate your repository clone, say `rainworldwide/`
-4. Copy the contents of `Rain World/` into `Rain World/server/game/`
-5. Build `rainworldwide/src/RainWorldwide.sln`. You can use the latest .NET version to build the project (using simply `dotnet build RainWorldwide.sln`), though you may need to install the .NET Framework 4.8 targeting pack too
-6. Move or rename the `Rain World/server/` directory as you wish
-7. Run the server using `server/startserver.bat`
+## Design document
+[This document](https://docs.google.com/document/d/e/2PACX-1vRcZ7R7M11ipMXaGYxjGvobF7zxPsWS1V6VeMHSnj0GeD_4NE6SoPITkrAWxF_1SsgdaSchAxIhWsTb/pub) includes many design considerations. It also contains current TODOs.
 
-## TODO
-- Direction from Dr. Card:
-  - Design document
-  - Decide when client gets authority over server, and why
-  - Justify why player-player collision is disabled
-  - How to handle grasps and paralysis: Should players stay stunned when grabbed while stunned?
-- Trim PNGs, sound effects, and unneeded Unity assets from server
+## How to set up a server on Windows
+First, set up the server files.
 
-## Diff for SERVER-Assembly-CSharp.dll
+1. Locate the `Rain World/` directory containing `RainWorld.exe`
+    1. Right click on Rain World in the Steam library
+    2. Click "Manage"
+    3. Click "Browse local files"
+2. Copy the contents of `Rain World/` into `Rain World/server/game/`
+
+Then, build this project.
+
+1. Set the `RainWorldDir` env var to point to the `Rain World/` directory
+2. Clone this repository into some directory, say `rainworldwide/`
+3. Build `rainworldwide/src/RainWorldwide.sln`
+    1. If not already installed, install [the .NET Framework 4.8 targeting pack](https://dotnet.microsoft.com/en-us/download/dotnet-framework/net48)
+    2. If not already installed, install [the latest version of .NET](https://dotnet.microsoft.com/en-us/download)
+    3. Run `dotnet build RainWorldwide.sln` in the command line
+
+After that, you can move or rename the `Rain World/server/` directory as you wish. Whenever you're ready, run the server using `server/startserver.bat`. All done!
+
+## Edits to SERVER-Assembly-CSharp.dll
 - Modified `Options.OptionsFile_OnReadCompleted` to force-enable `rwremix` and `rain-worldwide-server`
 - Modified `RainWorld.Awake()` to adjust save file path
 - Added the `RainWorld.SavePath()` method
