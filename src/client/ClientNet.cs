@@ -37,9 +37,9 @@ sealed class ClientNet
     public void Connect(string address, int port)
     {
         // When client connects and server is ready to join them into the game world,
-        // the server sends an IntroduceClient packet. The client checks for this in the menu.
-        // When it happens, the packet is stored in IntroPacket, the game switches to RainWorldGame,
-        // and hooks check for IntroPacket's existence.
+        //   the server sends an RealizePlayer packet. The client checks for this in the menu.
+        // The packet is stored in IntroPacket, the game switches to RainWorldGame,
+        //   and hooks check for IntroPacket's existence.
         Disconnect();
         Progress = ConnectionProgress.Connecting;
         client.Start();

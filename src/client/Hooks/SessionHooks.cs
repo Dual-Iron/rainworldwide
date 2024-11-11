@@ -1,4 +1,5 @@
-﻿using HUD;
+﻿using Common;
+using HUD;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
@@ -33,14 +34,14 @@ sealed class SessionHooks
         // Prevent errors and abnormal behavior with custom session type
         On.OverWorld.ctor += CreateClientSession;
         On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
-        On.World.ctor += World_ctor;
         On.HUD.HUD.InitSinglePlayerHud += HUD_InitSinglePlayerHud;
-        //IL.RainWorldGame.Update += FixPauseAndCrash; // Custom pause menu logic + update ClientRoomLogic
-        //On.RainWorldGame.Update += UpdateClientRoomLogic;
-        //IL.RainWorldGame.GrafUpdate += FixPause; // Custom pause menu logic
+        On.StoryGameSession.TimeTick += delegate { }; // Nullrefs
+
+        IL.RainWorldGame.Update += FixPauseAndCrash; // Custom pause menu logic + update ClientRoomLogic
+        IL.RainWorldGame.GrafUpdate += FixPause; // Custom pause menu logic
 
         // Decentralize RoomCamera.followAbstractCreature
-        //IL.RainWorldGame.ctor += RainWorldGame_ctor;
+        IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
 
     private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats> getSlugcatStats = (orig, self) => {
@@ -66,12 +67,11 @@ sealed class SessionHooks
         return orig(game);
     };
 
-
     SlugcatStats.Name storyCharOverride = null;
     private void Room_ctor(On.Room.orig_ctor orig, Room self, RainWorldGame game, World world, AbstractRoom abstractRoom)
     {
         if (game?.session is ClientSession session) {
-            storyCharOverride = session.World;
+            storyCharOverride = session.SlugcatWorld;
             orig(self, game, world, abstractRoom);
 
             // Don't spawn physical objects!!
@@ -107,9 +107,9 @@ sealed class SessionHooks
 
     private void CreateClientSession(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
-        if (ClientNet.State.IntroPacket.HasValue) {
-            game.session = new ClientSession(ClientNet.State.IntroPacket.Value, game);
-            game.startingRoom = ClientNet.State.IntroPacket.Value.StartingRoom;
+        if (ClientNet.State.IntroPacket is RealizePlayer r) {
+            game.session = new ClientSession(r, game);
+            game.startingRoom = r.StartingRoom;
         }
 
         orig(self, game);
@@ -129,9 +129,9 @@ sealed class SessionHooks
         }
         string startingRegion = split[0];
 
-        if (DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", startingRegion)) {
+        if (DirExistsAt(Custom.RootFolderDirectory(), "world", startingRegion)) {
             // Do nothing
-        } else if (split.Length > 2 && DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", split[1])) {
+        } else if (split.Length > 2 && DirExistsAt(Custom.RootFolderDirectory(), "world", split[1])) {
             startingRegion = split[1];
         } else {
             throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
@@ -139,20 +139,6 @@ sealed class SessionHooks
 
         self.LoadWorld(startingRegion, new(ClientNet.State.IntroPacket.Value.SlugcatWorld), false);
         self.FIRSTROOM = startingRoom;
-    }
-
-    private void World_ctor(On.World.orig_ctor orig, World self, RainWorldGame game, Region region, string name, bool singleRoomWorld)
-    {
-        if (game?.session is not ClientSession) {
-            orig(self, game, region, name, singleRoomWorld);
-            return;
-        }
-
-        // Assumes Session is either IsStorySession or IsArenaSession, so pretend game is null.
-        orig(self, null, region, name, singleRoomWorld);
-
-        self.game = game;
-        self.rainCycle = new(self, 10) { storyMode = true };
     }
 
     private void HUD_InitSinglePlayerHud(On.HUD.HUD.orig_InitSinglePlayerHud orig, HUD.HUD self, RoomCamera cam)
@@ -201,28 +187,9 @@ sealed class SessionHooks
         static RainWorldGame RoomRealizerHook(RainWorldGame game)
         {
             if (game.session is ClientSession session) {
-                // TODO session.RoomRealizer.UpdatePreRoom();
+                session.UpdatePreRoom();
             }
             return game;
-        }
-
-        // Load rooms like it's a story session (even though it's not)
-        cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
-        cursor.Emit(OpCodes.Ldarg_0);
-        cursor.EmitDelegate(UpdateRoomsForStorySession);
-
-        static bool UpdateRoomsForStorySession(bool orig, RainWorldGame game)
-        {
-            return orig || game.session is ClientSession;
-        }
-    }
-
-    private void UpdateClientRoomLogic(On.RainWorldGame.orig_Update orig, RainWorldGame self)
-    {
-        orig(self);
-
-        if (self.session is ClientSession sess) {
-            // TODO sess.RoomRealizer.UpdatePostRoom();
         }
     }
 

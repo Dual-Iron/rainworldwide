@@ -9,6 +9,9 @@ sealed class SessionHooks
 {
     public void Hook()
     {
+        // Fix number of story players
+        new Hook(typeof(RainWorldGame).GetMethod("get_StoryPlayerCount"), getStoryPlayerCount);
+
         // Fix SlugcatStats access
         new Hook(typeof(Player).GetMethod("get_slugcatStats"), getSlugcatStats);
         new Hook(typeof(Player).GetMethod("get_Malnourished"), getMalnourished);
@@ -20,17 +23,28 @@ sealed class SessionHooks
         On.RoomSettings.ctor += RoomSettings_ctor;
 
         // Jump right into the game immediately (because lobbies aren't implemented)
-        On.RainWorld.LoadSetupValues += RainWorld_LoadSetupValues;
+        On.RainWorld.LoadSetupValues += ImmediateStart;
+
+        // Do not game-over
+        On.RainWorldGame.GameOver += delegate { };
 
         // Prevent errors and abnormal behavior with custom session type
+        On.RainWorldGame.SpawnPlayers_bool_bool_bool_bool_WorldCoordinate += SpawnNobody;
         On.OverWorld.ctor += OverWorld_ctor;
         On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
         On.World.ctor += World_ctor;
-        IL.RainWorldGame.Update += RainWorldGame_Update;
 
-        // Decentralize RoomCamera.followAbstractCreature
+        // Fix RoomCamera.followAbstractCreature
+        IL.RainWorldGame.Update += RainWorldGame_Update;
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
+
+    private readonly Func<Func<RainWorldGame, int>, RainWorldGame, int> getStoryPlayerCount = (orig, self) => {
+        if (self.session is ServerSession session) {
+            return session.Players.Count;
+        }
+        return orig(self);
+    };
 
     private readonly Func<Func<Player, SlugcatStats>, Player, SlugcatStats> getSlugcatStats = (orig, self) => {
         if (Game().session is ServerSession session) {
@@ -48,9 +62,15 @@ sealed class SessionHooks
         orig(self, name, region, template, firstTemplate, new(ServerConfig.SlugcatWorld));
     }
 
-    private RainWorldGame.SetupValues RainWorld_LoadSetupValues(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)
+    // TODO: remove "worldCreaturesSpawn = false"
+    private RainWorldGame.SetupValues ImmediateStart(On.RainWorld.orig_LoadSetupValues orig, bool distributionBuild)
     {
-        return orig(distributionBuild) with { startScreen = false, playMusic = false };
+        return orig(distributionBuild) with { startScreen = false, playMusic = false, worldCreaturesSpawn = false };
+    }
+
+    private AbstractCreature SpawnNobody(On.RainWorldGame.orig_SpawnPlayers_bool_bool_bool_bool_WorldCoordinate orig, RainWorldGame self, bool player1, bool player2, bool player3, bool player4, WorldCoordinate location)
+    {
+        return orig(self, false, false, false, false, location);
     }
 
     private void OverWorld_ctor(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
@@ -70,10 +90,13 @@ sealed class SessionHooks
         }
         string startingRegion = split[0];
 
-        if (DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", startingRegion)) { } else if (split.Length > 2 && DirExistsAt(Custom.RootFolderDirectory(), "World", "Regions", split[1]))
+        if (DirExistsAt(Custom.RootFolderDirectory(), "world", startingRegion)) {
+            // Do nothing
+        } else if (split.Length > 2 && DirExistsAt(Custom.RootFolderDirectory(), "world", split[1])) {
             startingRegion = split[1];
-        else
+        } else {
             throw new InvalidOperationException($"Starting room has no matching region: {startingRoom}");
+        }
 
         self.LoadWorld(startingRegion, new(ServerConfig.SlugcatWorld), false);
         self.FIRSTROOM = startingRoom;
@@ -88,7 +111,7 @@ sealed class SessionHooks
         if (game != null) {
             int seconds = UnityEngine.Random.Range(ServerConfig.CycleTimeSecondsMin, ServerConfig.CycleTimeSecondsMax + 1);
 
-            self.rainCycle = new(self, 10) { cycleLength = seconds * 40 };
+            self.rainCycle = new(self, minutes: 10) { cycleLength = seconds * 40 };
 
             TimeSpan time = TimeSpan.FromSeconds(seconds);
             Log($"Cycle length is {time}");
@@ -106,29 +129,29 @@ sealed class SessionHooks
         static RainWorldGame RoomRealizerHook(RainWorldGame game)
         {
             if (game.session is ServerSession session) {
-                //TODO session.RoomRealizer.Update();
+                session.Update();
             }
             return game;
         }
-
-        // Update rooms like it's a story session (even though it's not)
-        cursor.GotoNext(MoveType.After, i => i.MatchCall<RainWorldGame>("get_IsStorySession"));
-        cursor.Emit(OpCodes.Pop);
-        cursor.Emit(OpCodes.Ldc_I4_1);
     }
 
     private void RainWorldGame_ctor(ILContext il)
     {
         ILCursor cursor = new(il);
 
+        // Seek from the end.
         cursor.Index = cursor.Body.Instructions.Count - 1;
 
         // Don't initialize RoomRealizer. Room realization logic must be redone.
+        // - if (!world.singleRoomWorld)
+        // + if (!true)
         cursor.GotoPrev(MoveType.After, i => i.MatchLdfld<World>("singleRoomWorld"));
         cursor.Emit(OpCodes.Pop);
         cursor.Emit(OpCodes.Ldc_I4_1);
 
-        // Remove check that throws an exception if no creatures are found for followAbstractCreature
+        // Remove check that throws an exception if no creatures are found for followAbstractCreature.
+        // - if (!ModManager.MSC && this.cameras[0].followAbstractCreature == null)
+        // + if (!ModManager.MSC && 1 == null)
         cursor.GotoPrev(MoveType.After, i => i.MatchLdfld<RoomCamera>("followAbstractCreature"));
         cursor.Emit(OpCodes.Pop);
         cursor.Emit(OpCodes.Ldc_I4_1);

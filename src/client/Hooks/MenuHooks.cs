@@ -48,16 +48,19 @@ sealed class MenuHooks
         } else if (ClientNet.State.Progress == ConnectionProgress.Disconnected) {
             connectingGreyed = false;
         } else if (ClientNet.State.Progress == ConnectionProgress.Connected && RealizePlayer.Queue.Latest(out var p)) {
-            Log($"Joining game: {p}");
+            Log($"Joining game: PlayerID = {p.PlayerID}");
             ClientNet.State.IntroducedToSession(p);
             self.manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
         }
 
-        // Prevent accidentally enabling MSC
-        if (ModManager.MSC) {
+        // Prevent accidentally enabling MSC or Jolly
+        string mods = "";
+        if (ModManager.MSC) mods += ", More Slugcats";
+        if (ModManager.CoopAvailable) mods += ", Jolly Co-op";
+        if (mods.Length > 0) {
             if (!warningAdded) {
                 warningAdded = true;
-                MenuLabel label = new(self, self.pages[0], "DISABLE MORE SLUGCATS EXPANSION", new(683, 50), Vector2.zero, true);
+                MenuLabel label = new(self, self.pages[0], $"DISABLE: {mods[2..]}", new(683, 50), Vector2.zero, true);
                 label.label.color = Color.red;
                 self.pages[0].subObjects.Add(label);
             }

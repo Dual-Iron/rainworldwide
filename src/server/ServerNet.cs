@@ -11,7 +11,7 @@ sealed class ServerNet
         ProcessArgs(out int port);
 
         string ip = GetLocalIPAddress();
-        LogValue(ip);
+        Log(ip);
 
         // Port forwarding
         Upnp.Open(port);
@@ -34,6 +34,8 @@ sealed class ServerNet
 
     readonly NetManager server;
 
+    public readonly List<NetPeer> waitingToConnect = [];
+
     public void Stop()
     {
         server.Stop(sendDisconnectMessages: true);
@@ -48,17 +50,14 @@ sealed class ServerNet
         }
     }
 
-    private static void Lis_PeerConnectedEvent(NetPeer peer)
+    private void Lis_PeerConnectedEvent(NetPeer peer)
     {
         Log($"Client {peer.Address} connected");
-        // TODO IMPORTANT: Make sure players are able to join each other.
-        LogValue(Game());
-        LogValue(Game()?.session);
 
         if (Game()?.session is ServerSession session) {
             session.Connect(peer);
         } else {
-            // TODO join all clients when session starts
+            waitingToConnect.Add(peer);
         }
     }
 
@@ -75,7 +74,7 @@ sealed class ServerNet
         port = Packets.DefaultPort;
 
         string[] args = Environment.GetCommandLineArgs();
-        LogValue(args);
+        Log(args);
 
         var portStr = args.FirstOrDefault(a => a.StartsWith("-port="));
         if (portStr != null && ushort.TryParse(portStr.Substring(6), out ushort _port) && port != _port) {

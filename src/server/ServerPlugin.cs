@@ -1,6 +1,7 @@
 ﻿using MonoMod.RuntimeDetour;
 using BepInEx;
 using System.Security.Permissions;
+using Server.Hooks;
 
 // Allows access to private members
 #pragma warning disable CS0618
@@ -14,9 +15,9 @@ sealed class ServerPlugin : BaseUnityPlugin
 {
     public void OnEnable()
     {
-        // Prevent accidentally enabling MSC
-        if (ModManager.MSC) {
-            LogError("DISABLE MORE SLUGCATS EXPANSION. Server closing.");
+        // Prevent accidentally enabling MSC or Jolly
+        if (ModManager.MSC || ModManager.CoopAvailable) {
+            LogError("Server incompatible with [More Slugcats] and [Jolly Co-op]. Server closing.");
             Application.Quit();
             return;
         }
@@ -29,6 +30,8 @@ sealed class ServerPlugin : BaseUnityPlugin
         new Hook(typeof(Rewired.Player).GetMethod("GetButton", [typeof(int)]), GetInput);
 
         // No need to hook Application.PersistentDataPath, that is included in the modified Assembly-CSharp.dll file.
+
+        new SessionHooks().Hook();
 
         // Init server netcode!
         _ = ServerNet.State;
@@ -46,7 +49,7 @@ sealed class ServerPlugin : BaseUnityPlugin
             orig(self);
         }
         catch (Exception e) {
-            LogError($"Error cascaded to RainWorld.Start(). {e}");
+            LogError($"Error propagated to RainWorld.Start()\n{e.ToDebugString()}");
 
             Application.Quit();
         }
@@ -61,7 +64,7 @@ sealed class ServerPlugin : BaseUnityPlugin
             orig(self);
         }
         catch (Exception e) {
-            LogError($"Error in RainWorld.Update(). {e}");
+            LogError($"Error propagated to RainWorld.Update()\n{e.ToDebugString()}");
         }
     }
 

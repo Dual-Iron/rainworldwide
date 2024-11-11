@@ -6,7 +6,6 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Client", "client\Client.csproj", "{C3A15939-DB46-4017-A5E4-2EAACB5D667E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{591FC620-B824-4348-B7F3-66977F40F59C} = {591FC620-B824-4348-B7F3-66977F40F59C}
-		{9D32300E-3E75-4146-9F57-1D748EF535D7} = {9D32300E-3E75-4146-9F57-1D748EF535D7}
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server", "server\Server.csproj", "{9D32300E-3E75-4146-9F57-1D748EF535D7}"
@@ -17,9 +16,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{10E10FA9-971D-4B61-8075-463BC13D2C7A}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SourceGen", "SourceGen\SourceGen.csproj", "{591FC620-B824-4348-B7F3-66977F40F59C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SourceGen", "SourceGen\SourceGen.csproj", "{591FC620-B824-4348-B7F3-66977F40F59C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

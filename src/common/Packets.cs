@@ -41,29 +41,23 @@ sealed class PacketQueue<T> where T : struct
 
     public bool Latest(out T packet)
     {
-        bool any = false;
-        while (Dequeue(out _, out packet)) {
-            // Drain all the packets currently queued
-            any = true;
-        }
-        return any;
+        return Latest(out int _, out packet);
     }
 
     public bool Latest(out int senderTick, out T packet)
     {
-        bool any = false;
-        while (Dequeue(out senderTick, out packet)) {
+        (senderTick, packet) = (-1, default);
+        while (Dequeue(out int s, out T p)) {
             // Drain all the packets currently queued
-            any = true;
+            (senderTick, packet) = (s, p);
         }
-        return any;
+        return senderTick != -1;
     }
 
     public bool Dequeue(out int senderTick, out T packet)
     {
         if (packets.Count == 0) {
-            senderTick = 0;
-            packet = default;
+            (senderTick, packet) = (-1, default);
             return false;
         }
         (senderTick, packet) = packets.Dequeue();

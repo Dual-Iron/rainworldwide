@@ -3,6 +3,7 @@ global using System.Linq;
 global using System.Collections.Generic;
 global using UnityEngine;
 global using static Common.Utils;
+
 using System.Runtime.CompilerServices;
 using System.Collections;
 using System.Text;
@@ -15,27 +16,43 @@ using LiteNetLib;
 
 namespace Common;
 
+sealed class Field<K, V>(Func<K, V> lazyConstructor) where K : class where V : class
+{
+    private readonly ConditionalWeakTable<K, V> cwt = new();
+
+    private V InitializeField(K key) => lazyConstructor(key);
+
+    public V this[K obj] => cwt.GetValue(obj, InitializeField);
+}
+
+sealed class ByID<V>(Func<int, V> lazyConstructor) where V : class
+{
+    private readonly Dictionary<int, V> dict = [];
+
+    public V this[int id] => dict.TryGetValue(id, out var v) ? v : dict[id] = lazyConstructor(id);
+
+    public override string ToString() => Utils.ToDebugString(dict);
+}
+
 static class Utils
 {
     #region LOGGING
     private static readonly BepInEx.Logging.ManualLogSource logger = BepInEx.Logging.Logger.CreateLogSource("RWW");
 
-    public static void Log([CallerLineNumber] int line = 0, [CallerFilePath] string file = "", [CallerMemberName] string mem = "")
-    {
-        logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {Path.GetFileName(file)}:{line} in {mem}()");
-    }
-    public static void Log(string msg)
-    {
-        logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {msg}");
-    }
     public static void LogError(object msg)
     {
         logger.LogError($"{DateTime.UtcNow:HH:mm:ss.fff} | {(msg is string ? msg : ToDebugString(msg))}");
     }
-    public static T LogValue<T>(T value, [CallerArgumentExpression(nameof(value))] string expression = "")
+    public static T Log<T>(T value, [CallerArgumentExpression(nameof(value))] string expression = "")
     {
-        if (expression.Length > 15) {
-            expression = expression.Substring(0, 12).Trim(',', ' ', '.') + "...";
+        // Log string literals literally
+        if (value is string s && (expression.StartsWith("\"") || expression.StartsWith("$"))) {
+            logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {s}");
+            return value;
+        }
+        const int maxExprLen = 20;
+        if (expression.Length > maxExprLen) {
+            expression = expression[..(maxExprLen - 3)].Trim(',', ' ', '.') + "...";
         }
         logger.LogDebug($"{DateTime.UtcNow:HH:mm:ss.fff} | {expression} = {ToDebugString(value)}");
         return value;
@@ -66,11 +83,13 @@ static class Utils
             IntVector2 v => $"({v.x}, {v.y})",
             PhysicalObject p => $"R#{p.abstractPhysicalObject?.ToDebugString() ?? p.GetType().ToString()}",
             AbstractCreature c => DebugC(c),
-            AbstractPhysicalObject p => $"{p.type}[ID.{p.ID.number}, {p.pos.ToDebugString()}]",
+            AbstractPhysicalObject p => $"{p.type}[ID.{p.ID.number} @ {p.pos.ToDebugString()}]",
             WorldCoordinate wc => DebugWc(wc),
             EntityID e => $"ID.{e.number}",
             IDictionary dict => DebugDict(dict),
-            IEnumerable objs => DebugEnum(objs),
+            IEnumerable objs => DebugEnumerable(objs),
+            Exception e => DebugException(e),
+            StringBuilder sb => $"sb\"{sb}\"",
             _ => obj.ToString(),
         };
     }
@@ -83,7 +102,7 @@ static class Utils
         } else if (c.state.dead) {
             extra = ", Dead";
         }
-        return $"{c.creatureTemplate.type}[ID.{c.ID.number}{extra}, {c.pos.ToDebugString()}]";
+        return $"{c.creatureTemplate.type}[ID.{c.ID.number}{extra} @ {c.pos.ToDebugString()}]";
     }
     static string DebugWc(WorldCoordinate wc)
     {
@@ -111,7 +130,7 @@ static class Utils
         sb.Append(" }");
         return sb.ToString();
     }
-    static string DebugEnum(IEnumerable objects)
+    static string DebugEnumerable(IEnumerable objects)
     {
         StringBuilder sb = new("[");
         bool first = true;
@@ -124,6 +143,23 @@ static class Utils
             sb.Append(obj?.ToDebugString() ?? "null");
         }
         sb.Append("]");
+        return sb.ToString();
+    }
+    static string DebugException(Exception e)
+    {
+        StringBuilder sb = new(e.GetType().Name + " | " + e.Message + "\n");
+        string[] lines = e.ToString().Split('\n');
+        for (int i = 1; i < lines.Length; i++) {
+            string l = lines[i];
+            if (!l.StartsWith("  at ") || l.Contains(".Trampoline") || l.Contains("ThrowHelper")) {
+                continue;
+            }
+            l = l.Replace("(wrapper dynamic-method) MonoMod.Utils.DynamicMethodDefinition.", "");
+            if (l.Contains(" [0x")) {
+                l = l[..l.IndexOf(" [0x")];
+            }
+            sb.AppendLine(l);
+        }
         return sb.ToString();
     }
     #endregion

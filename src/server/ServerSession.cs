@@ -5,8 +5,6 @@ namespace Server;
 
 sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConfig.SlugcatWorld), game)
 {
-    // TODO: Inspect .StoryPlayerCount
-
     // Saved value
     int MaxPID = 0;
 
@@ -24,7 +22,6 @@ sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConf
         RealizePlayer packet = new(player.ID(), saveStateNumber.ToString(), player.Room.name);
 
         peer.Send(packet, DeliveryMethod.ReliableOrdered);
-        peer.Send(new SyncTick(), DeliveryMethod.ReliableOrdered);
 
         CatchUp(peer);
     }
@@ -44,6 +41,11 @@ sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConf
             EntityID id = new(-1, pid); // TODO: other objects' IDs start at 1000, so this is a safe bet.. for now. Make IDs start at 100,000 later.
             AbstractCreature player = new(game.world, StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Slugcat), null, CreateNewPlayerPos(), id);
             player.state = new PlayerState(player, pid, SlugcatStats.Name.White, false);
+
+            // Prevents IOOB errors.
+            if (playerSessionRecords.Length < pid + 1) {
+                Array.Resize(ref playerSessionRecords, pid + 1);
+            }
 
             base.AddPlayer(player);
         }
@@ -70,8 +72,24 @@ sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConf
         // TODO
     }
 
+    readonly ByID<SlugcatStats> stats = new(_ => new SlugcatStats(SlugcatStats.Name.White, false));
     public SlugcatStats GetStatsFor(int playerID)
     {
-        return new SlugcatStats(SlugcatStats.Name.White, false);
+        return stats[playerID];
+    }
+
+    readonly ServerRoomRealizer roomRealizer = new();
+
+    public void Update()
+    {
+        roomRealizer.Update();
+
+        // Connect waiting peers
+        foreach (var peer in ServerNet.State.waitingToConnect) {
+            Connect(peer);
+        }
+        ServerNet.State.waitingToConnect.Clear();
+
+
     }
 }

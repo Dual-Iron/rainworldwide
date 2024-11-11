@@ -18,8 +18,9 @@ sealed class ClientPlugin : BaseUnityPlugin
     public void OnEnable()
     {
         string ip = GetLocalIPAddress();
-        LogValue(ip);
+        Log(ip);
 
         new MenuHooks().Hook();
+        new SessionHooks().Hook();
     }
 }
