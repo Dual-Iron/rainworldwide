@@ -35,6 +35,8 @@ sealed class SessionHooks
         On.World.ctor += World_ctor;
 
         // Fix RoomCamera.followAbstractCreature
+        // Also: room update behavior!
+        On.RainWorldGame.Update += BroadcastChanges;
         IL.RainWorldGame.Update += RainWorldGame_Update;
         IL.RainWorldGame.ctor += RainWorldGame_ctor;
     }
@@ -118,6 +120,15 @@ sealed class SessionHooks
         }
     }
 
+    private void BroadcastChanges(On.RainWorldGame.orig_Update orig, RainWorldGame self)
+    {
+        orig(self);
+
+        if (self.session is ServerSession sess) {
+            sess.PostUpdate();
+        }
+    }
+
     private void RainWorldGame_Update(ILContext il)
     {
         ILCursor cursor = new(il);
@@ -129,7 +140,7 @@ sealed class SessionHooks
         static RainWorldGame RoomRealizerHook(RainWorldGame game)
         {
             if (game.session is ServerSession session) {
-                session.Update();
+                session.UpdateRoomLogic();
             }
             return game;
         }

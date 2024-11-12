@@ -1,21 +1,47 @@
 ﻿// Rye © 2024
 // Defines all the packets used by RainWorldwide
-//   0x1X - Session Management
-//   0x2X - Syncing
-//   0x3X - Syncing
+//   0x1X Session Management
+//   0x2X Syncing
+//   0x3X Realizing creatures
+//   0x4X Updating 
 string packets = """
-    0x10 RealizePlayer
+    0x10 JoinClient
         i32 PlayerID
         str SlugcatWorld
         str StartingRoom
     0x20 SyncTick
+    0x21 DestroyObject
+        i32 ID
+    0x22 KillCreature
+        i32 ID
+    0x23 Grab
+        i32 GrabberID
+        i32 GrabbedID
+        f32 Dominance
+        u8  GraspUsed
+        u8  ChunkGrabbed
+        u8  Pacifying
+        str Shareability
+    0x24 Release
+        i32 GrabberID
+        i32 GrabbedID
+        u8  GraspUsed
+    0x30 RealizePlayer
+        i32 PlayerID
+        i32 Room
+    0x40 UpdatePlayer
+        i32 PlayerID
+        i32 Input
+        fvec HeadPos
+        fvec HeadVel
+        fvec BodyPos
+        fvec BodyVel
     """;
 
 #region GENERATION CODE
 string generated = """
     using LiteNetLib;
     using LiteNetLib.Utils;
-    using RWCustom;
     
     namespace Common;
     
@@ -30,7 +56,9 @@ string SplitWord()
 
 static string ToCSharp(string ty) => ty switch
 {
+    "u8" => "byte",
     "i32" => "int",
+    "f32" => "float",
     "str" => "string",
     "fvec" => "Vector2",
     "ivec" => "IntVector2",
@@ -94,9 +122,6 @@ generated += $$"""
             }
             AssumeEqual(reader.AvailableBytes, 0, twoExpr: "expected");
         }
-
-        public static Vector2 GetVector2(this NetDataReader reader) => new(x: reader.GetFloat(), y: reader.GetFloat());
-        public static IntVector2 GetIntVector2(this NetDataReader reader) => new(p1: reader.GetInt(), p2: reader.GetInt());
     }
 
     """;

@@ -32,6 +32,7 @@ sealed class ServerPlugin : BaseUnityPlugin
         // No need to hook Application.PersistentDataPath, that is included in the modified Assembly-CSharp.dll file.
 
         new SessionHooks().Hook();
+        new ObjectHooks().Hook();
 
         // Init server netcode!
         _ = ServerNet.State;

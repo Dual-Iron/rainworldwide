@@ -9,7 +9,7 @@ sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConf
     int MaxPID = 0;
 
     // Player ID decided whenever a peer logs in.
-    readonly Dictionary<NetPeer, int> peers = [];
+    public readonly Dictionary<NetPeer, int> peers = [];
 
     public void Connect(NetPeer peer)
     {
@@ -19,7 +19,7 @@ sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConf
             player.RealizeInRoom();
         }
 
-        RealizePlayer packet = new(player.ID(), saveStateNumber.ToString(), player.Room.name);
+        JoinClient packet = new(player.ID(), saveStateNumber.ToString(), player.Room.name);
 
         peer.Send(packet, DeliveryMethod.ReliableOrdered);
 
@@ -45,6 +45,7 @@ sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConf
             // Prevents IOOB errors.
             if (playerSessionRecords.Length < pid + 1) {
                 Array.Resize(ref playerSessionRecords, pid + 1);
+                playerSessionRecords[pid] = new(pid);
             }
 
             base.AddPlayer(player);
@@ -72,24 +73,29 @@ sealed class ServerSession(RainWorldGame game) : StoryGameSession(new(ServerConf
         // TODO
     }
 
-    readonly ByID<SlugcatStats> stats = new(_ => new SlugcatStats(SlugcatStats.Name.White, false));
+    public AbstractCreature GetPlayer(NetPeer peer) => Players[peers[peer]];
+    public AbstractCreature GetPlayer(int playerID) => Players[playerID];
+
+    readonly ByID<SlugcatStats> stats = [];
     public SlugcatStats GetStatsFor(int playerID)
     {
-        return stats[playerID];
+        return stats.TryGetValue(playerID, out var v) ? v : new(SlugcatStats.Name.White, false);
     }
 
-    readonly ServerRoomRealizer roomRealizer = new();
-
-    public void Update()
+    readonly ServerRoomLogic serverRooms = new(game);
+    public void UpdateRoomLogic()
     {
-        roomRealizer.Update();
-
         // Connect waiting peers
         foreach (var peer in ServerNet.State.waitingToConnect) {
             Connect(peer);
         }
         ServerNet.State.waitingToConnect.Clear();
 
+        serverRooms.UpdateRoomLogic();
+    }
 
+    public void PostUpdate()
+    {
+        serverRooms.PostUpdate();
     }
 }

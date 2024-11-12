@@ -1,5 +1,6 @@
 using LiteNetLib;
 using LiteNetLib.Utils;
+using RWCustom;
 
 namespace Common;
 
@@ -28,22 +29,35 @@ static partial class Packets
         writer.Put(value);
         peer.Send(writer, deliveryMethod);
     }
+
+    public static void Put(this NetDataWriter writer, Vector2 vec)
+    {
+        writer.Put(vec.x);
+        writer.Put(vec.y);
+    }
+    public static void Put(this NetDataWriter writer, IntVector2 vec)
+    {
+        writer.Put(vec.x);
+        writer.Put(vec.y);
+    }
+    public static Vector2 GetVector2(this NetDataReader reader) => new(x: reader.GetFloat(), y: reader.GetFloat());
+    public static IntVector2 GetIntVector2(this NetDataReader reader) => new(p1: reader.GetInt(), p2: reader.GetInt());
 }
 
 sealed class PacketQueue<T> where T : struct
 {
     readonly Queue<(int, T)> packets = new(16);
 
-    public void Enqueue(int senderTick, T packet)
+    public void Enqueue(int senderTick, T packet) => packets.Enqueue((senderTick, packet));
+
+    public IEnumerable<T> All()
     {
-        packets.Enqueue((senderTick, packet));
+        while (Dequeue(out _, out T p)) {
+            yield return p;
+        }
     }
 
-    public bool Latest(out T packet)
-    {
-        return Latest(out int _, out packet);
-    }
-
+    public bool Latest(out T packet) => Latest(out int _, out packet);
     public bool Latest(out int senderTick, out T packet)
     {
         (senderTick, packet) = (-1, default);

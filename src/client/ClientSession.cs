@@ -2,33 +2,43 @@
 
 namespace Client;
 
-sealed class ClientSession(RealizePlayer c, RainWorldGame game) : StoryGameSession(new(c.SlugcatWorld), game)
+sealed class ClientSession(JoinClient c, RainWorldGame game) : StoryGameSession(new(c.SlugcatWorld), game)
 {
-    public int PID { get; } = c.PlayerID;
+    public int PlayerID { get; } = c.PlayerID;
     public string StartingRoom { get; } = c.StartingRoom;
     public SlugcatStats.Name SlugcatWorld { get; } = new(c.SlugcatWorld);
 
+    public readonly ByID<PhysicalObject> Objects = [];
+    public readonly ByID<UpdatePlayer> PlayerUpdates = [];
+
+    public AbstractCreature MyPlayer => Players.FirstOrDefault(p => p.ID() == PlayerID);
+
     public override void AddPlayer(AbstractCreature player)
     {
-        if (player.ID() == PID) {
-            base.AddPlayer(player);
+        int pid = PlayerID;
 
-            Log($"Added my player ({player.ID()}) to session");
+        if (player.ID() == pid) {
+            Players.Add(player);
+
+            if (playerSessionRecords.Length < pid + 1) {
+                Array.Resize(ref playerSessionRecords, pid + 1);
+                playerSessionRecords[pid] = new(pid);
+            }
+
+            Log($"Added player ID.{player.ID()} (self) to session");
         }
     }
 
-    public SlugcatStats GetStatsFor(int _playerID)
+    public SlugcatStats GetStatsFor(int _playerID) => new(SlugcatStats.Name.White, false);
+
+    readonly ClientRoomLogic clientRooms = new(game);
+    public void UpdateRoomLogic()
     {
-        return new(SlugcatStats.Name.White, false);
+        clientRooms.UpdateRoomLogic();
     }
 
-    public void UpdatePreRoom()
+    internal void PostUpdate()
     {
-        if (MyPlayer != null) {
-            game.roomRealizer ??= new(MyPlayer, game.world);
-            game.roomRealizer.Update();
-        }
+        clientRooms.PostUpdate();
     }
-
-    public AbstractCreature MyPlayer => Players.Count > 0 ? Players[0] : null;
 }

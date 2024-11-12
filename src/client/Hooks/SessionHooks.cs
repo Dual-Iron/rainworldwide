@@ -27,11 +27,15 @@ sealed class SessionHooks
         // Fix SlugcatWorld
         On.RoomSettings.ctor += RoomSettings_ctor;
 
-        // Fix disconnections
-        On.RainWorldGame.Update += ExitOnDisconnect;
+        // Fix disconnections, add room logic
+        On.RainWorldGame.Update += ExitOnDisconnectAndSync;
         On.RainWorldGame.ExitToMenu += DisconnectOnExit;
 
+        // Do not game-over
+        On.RainWorldGame.GameOver += delegate { };
+
         // Prevent errors and abnormal behavior with custom session type
+        On.RainWorldGame.SpawnPlayers_bool_bool_bool_bool_WorldCoordinate += SpawnNobody;
         On.OverWorld.ctor += CreateClientSession;
         On.OverWorld.LoadFirstWorld += OverWorld_LoadFirstWorld;
         On.HUD.HUD.InitSinglePlayerHud += HUD_InitSinglePlayerHud;
@@ -89,12 +93,15 @@ sealed class SessionHooks
         orig(self, name, region, template, firstTemplate, playerChar);
     }
 
-    private void ExitOnDisconnect(On.RainWorldGame.orig_Update orig, RainWorldGame self)
+    private void ExitOnDisconnectAndSync(On.RainWorldGame.orig_Update orig, RainWorldGame self)
     {
         if (self.session is ClientSession && ClientNet.State.Progress != ConnectionProgress.Connected && self.manager.upcomingProcess == null) {
             self.ExitToMenu();
         }
         orig(self);
+        if (self.session is ClientSession sess) {
+            sess.PostUpdate();
+        }
     }
 
     private void DisconnectOnExit(On.RainWorldGame.orig_ExitToMenu orig, RainWorldGame self)
@@ -105,9 +112,17 @@ sealed class SessionHooks
         orig(self);
     }
 
+    private AbstractCreature SpawnNobody(On.RainWorldGame.orig_SpawnPlayers_bool_bool_bool_bool_WorldCoordinate orig, RainWorldGame self, bool player1, bool player2, bool player3, bool player4, WorldCoordinate location)
+    {
+        if (self.session is ClientSession) {
+            player1 = player2 = player3 = player4 = false;
+        }
+        return orig(self, player1, player2, player3, player4, location);
+    }
+
     private void CreateClientSession(On.OverWorld.orig_ctor orig, OverWorld self, RainWorldGame game)
     {
-        if (ClientNet.State.IntroPacket is RealizePlayer r) {
+        if (ClientNet.State.IntroPacket is JoinClient r) {
             game.session = new ClientSession(r, game);
             game.startingRoom = r.StartingRoom;
         }
@@ -187,7 +202,7 @@ sealed class SessionHooks
         static RainWorldGame RoomRealizerHook(RainWorldGame game)
         {
             if (game.session is ClientSession session) {
-                session.UpdatePreRoom();
+                session.UpdateRoomLogic();
             }
             return game;
         }

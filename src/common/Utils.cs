@@ -25,14 +25,7 @@ sealed class Field<K, V>(Func<K, V> lazyConstructor) where K : class where V : c
     public V this[K obj] => cwt.GetValue(obj, InitializeField);
 }
 
-sealed class ByID<V>(Func<int, V> lazyConstructor) where V : class
-{
-    private readonly Dictionary<int, V> dict = [];
-
-    public V this[int id] => dict.TryGetValue(id, out var v) ? v : dict[id] = lazyConstructor(id);
-
-    public override string ToString() => Utils.ToDebugString(dict);
-}
+sealed class ByID<V> : Dictionary<int, V>;
 
 static class Utils
 {
@@ -168,8 +161,50 @@ static class Utils
     private static RainWorld Rw => rw ??= UnityEngine.Object.FindObjectOfType<RainWorld>();
     public static RainWorldGame Game() => Rw?.processManager?.currentMainLoop as RainWorldGame;
 
+    public static BodyChunk Head(this Player p) => p.bodyChunks[0];
+    public static BodyChunk Body(this Player p) => p.bodyChunks[1];
+
     public static int ID(this PhysicalObject o) => o.abstractPhysicalObject.ID.number;
     public static int ID(this AbstractPhysicalObject o) => o.ID.number;
+
+#if CLIENT
+    public static bool IsMe(this AbstractCreature c) => c.world.game.session is Client.ClientSession s && s.PlayerID == c.ID();
+    public static bool IsMe(this Player p) => IsMe(p.abstractCreature);
+#endif
+
+    // Format: XXYYAADD
+    public static int InputToInt(this Player.InputPackage input)
+    {
+        int xx = (input.x + 1) << 24;
+        int yy = (input.y + 1) << 16;
+        int aa = (input.jmp ? 1 : 0) << 8 |
+                (input.thrw ? 1 : 0) << 9 |
+                (input.pckp ? 1 : 0) << 10 |
+                (input.mp ? 1 : 0) << 11;
+        int dd = input.downDiagonal + 1;
+        return xx | yy | aa | dd;
+    }
+    public static Player.InputPackage InputFromInt(int value)
+    {
+        int x = ((value >> 24) & 0xFF) - 1; // Extract XX and subtract the offset
+        int y = ((value >> 16) & 0xFF) - 1; // Extract YY and subtract the offset
+
+        // Extract AA (4 bits from bit 8–11)
+        int aa = (value >> 8) & 0xFF;
+        bool jmp = (aa & (1 << 0)) != 0;
+        bool thrw = (aa & (1 << 1)) != 0;
+        bool pckp = (aa & (1 << 2)) != 0;
+        bool mp = (aa & (1 << 3)) != 0;
+
+        // Extract downDiagonal from least significant bits
+        int downDiagonal = (value & 0xFF) - 1;
+
+        return new(false, Options.ControlSetup.Preset.None, x, y, jmp, thrw, pckp, mp, false)
+        {
+            downDiagonal = downDiagonal
+        };
+    }
+
 
     public static bool DirExistsAt(params string[] path)
     {

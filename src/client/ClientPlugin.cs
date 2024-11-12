@@ -22,5 +22,6 @@ sealed class ClientPlugin : BaseUnityPlugin
 
         new MenuHooks().Hook();
         new SessionHooks().Hook();
+        new ObjectHooks().Hook();
     }
 }
